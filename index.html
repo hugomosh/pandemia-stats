@@ -1,0 +1,64 @@
+<!-- index.html -->
+<html>
+  <style>
+    body {
+      margin: auto;
+      width: 885px;
+      font: 10px arial;
+      padding: 25px;
+    }
+    #controls {
+      display: flex;
+      justify-content: space-evenly;
+      width: 100%;
+    }
+    .y-axis line {
+      opacity: 0.2;
+    }
+    .y-axis path {
+      display: none;
+    }
+    .line {
+      fill: none;
+      stroke-width: 1.5px;
+      opacity: 0.75;
+    }
+    .overlay {
+      fill: none;
+      pointer-events: all;
+    }
+    .lineHoverText {
+      text-shadow: -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff,
+        2px 2px 0 #fff;
+    }
+    .hoverCircle {
+      opacity: 0.75;
+    }
+  </style>
+  <body>
+    <h1>COVID-19 Cases by country</h1>
+    <div id="controls">
+      <div style="display: grid;">
+        <label for="ncases">Number of cases to fix the origin</label>
+        <input
+          type="number"
+          id="ncases"
+          name="ncases"
+          min="0"
+          step="10"
+          value="100"
+        />
+      </div>
+      <div>
+        <input type="radio" id="log" name="scale" value="log" default checked />
+        <label for="log">Log</label><br />
+        <input type="radio" id="ordinal" name="scale" value="ordinal" />
+        <label for="ordinal">Ordinal</label><br />
+      </div>
+    </div>
+
+    <svg id="chart" width="850" height="410"></svg>
+    <p>Inspired by FT</p>
+    <script src="./index.ts"></script>
+  </body>
+</html>
