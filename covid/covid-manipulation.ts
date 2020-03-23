@@ -6,7 +6,6 @@ export function matchRegionsHist(
   let res = {};
   Object.keys(regions).forEach(key => {
     const regionHist = regions[key];
-    console.log({ key, regionHist });
     let regionMatchedHist = matchRegionHist(regionHist, nCases, attribute);
     res[key] = regionMatchedHist;
   });

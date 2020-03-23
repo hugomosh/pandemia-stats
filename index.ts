@@ -30,19 +30,16 @@ async function main() {
 
   const STATUS = "confirmed";
   //const STATUS = "deaths"; //"confirmed";
-  const matchedStartingPoint = matchRegionsHist(
-    {
-      MX: MX.stats.history,
-      US: US.stats.history,
-      ES: ES.stats.history,
-      IT: IT.stats.history
-      // UK: UK.stats.history
-      // CA: CA.stats.history
-      // USCA: USCA.stats.history
-    },
-    nCases,
-    STATUS
-  );
+  const data = {
+    MX: MX.stats.history,
+    US: US.stats.history,
+    ES: ES.stats.history,
+    IT: IT.stats.history
+    // UK: UK.stats.history
+    // CA: CA.stats.history
+    // USCA: USCA.stats.history
+  };
+  let matchedStartingPoint = matchRegionsHist(data, nCases, STATUS);
   console.log({ matchedStartingPoint });
 
   var svg = d3.select("#chart"),
@@ -103,6 +100,7 @@ async function main() {
 
   update(nCases);
   function update(cases) {
+    matchedStartingPoint = matchRegionsHist(data, cases, STATUS);
     var copy = Object.keys(matchedStartingPoint);
     var regions = copy.map(function(id) {
       return {
@@ -149,7 +147,13 @@ async function main() {
       .attr("x", d => x(d.values.length - 1))
       // Place the ticks at the same y position as
       // the last y value of the line (remember, d is our array of points)
-      .attr("y", d => y(d.values[d.values.length - 1][STATUS]))
+      .attr("y", d =>
+        y(
+          d.values[d.values.length - 1]
+            ? d.values[d.values.length - 1][STATUS]
+            : false
+        )
+      )
       .attr("dy", "0.35em")
       .style("fill", d => z(d.id))
       .style("font-family", "sans-serif")
