@@ -22,10 +22,11 @@ async function main() {
   const ES: region = (await getCountryStats("ES")) as region;
   const IT: region = (await getCountryStats("IT")) as region;
   //const UK: region = (await getCountryStats("GB")) as region;
-  //const CA: region = (await getCountryStats("CA")) as region;
-  //const USCA: region = (await getCountryStats("US-CA")) as region;
+  const CA: region = (await getCountryStats("CA")) as region;
+  const USCA: region = (await getCountryStats("US-CA")) as region;
   console.log({ MX, US });
   const nCases = 0;
+  d3.select("#ncases").property("value", nCases);
   const DAYS = 60;
 
   const STATUS = "confirmed";
@@ -33,11 +34,11 @@ async function main() {
   const data = {
     MX: MX.stats.history,
     US: US.stats.history,
-    ES: ES.stats.history,
-    IT: IT.stats.history
+    //ES: ES.stats.history,
+    //IT: IT.stats.history
     // UK: UK.stats.history
-    // CA: CA.stats.history
-    // USCA: USCA.stats.history
+    CA: CA.stats.history,
+    USCA: USCA.stats.history
   };
   let matchedStartingPoint = matchRegionsHist(data, nCases, STATUS);
   console.log({ matchedStartingPoint });
@@ -51,11 +52,40 @@ async function main() {
     .scaleLinear()
     .rangeRound([margin.left, width - margin.right])
     .domain([0, DAYS]);
+  const defaultSelection = [0, DAYS];
 
-  var yLog = d3
-    .scaleSymlog()
-    .constant(1000)
-    .rangeRound([height - margin.bottom, margin.top]);
+  /*
+  const brush = d3
+    .brushX()
+    .extent([
+      [margin.left, 0.5],
+      [width - margin.right, height - margin.bottom + 0.5]
+    ])
+    .on("brush", brushed)
+    .on("end", brushended);
+
+  const gb = svg
+    .append("g")
+    .call(brush)
+    .call(brush.move, defaultSelection);
+  function brushed() {
+    if (d3.event.selection) {
+      svg.property(
+        "value",
+        d3.event.selection.map(x.invert, x).map(d3.utcDay.round)
+      );
+      svg.dispatch("input");
+    }
+  }
+
+  function brushended() {
+    if (!d3.event.selection) {
+      gb.call(brush.move, defaultSelection);
+    }
+  }
+  */
+
+  var yLog = d3.scaleLog().rangeRound([height - margin.bottom, margin.top]);
   var yOrginal = d3
     .scaleLinear()
     .rangeRound([height - margin.bottom, margin.top]);
@@ -72,7 +102,7 @@ async function main() {
     .append("g")
     .attr("class", "y-axis")
     .attr("transform", "translate(" + margin.left + ",0)");
-  var focus = svg
+  /* var focus = svg
     .append("g")
     .attr("class", "focus")
     .style("display", "none");
@@ -95,7 +125,7 @@ async function main() {
     .attr("class", "overlay")
     .attr("x", margin.left)
     .attr("width", width - margin.right - margin.left)
-    .attr("height", height);
+    .attr("height", height);*/
 
   const radioButton = d3
     .select('input[name="scale"]:checked')
@@ -125,11 +155,11 @@ async function main() {
     });
     x.domain([0, d3.max(regions, d => d.values.length)]);
     y.domain([
-      cases,
+      cases == 0 ? 1 : cases,
       d3.max(regions, d =>
         d3.max(d.values.slice(0, DAYS), c => Number(c[STATUS]))
       )
-    ]);
+    ]).clamp(true);
 
     svg
       .selectAll(".y-axis")
@@ -187,11 +217,13 @@ async function main() {
     const radioButton = d3
       .select('input[name="scale"]:checked')
       .property("value");
-    update(d3.select("#ncases").property("value"), { scale: radioButton });
+    const nCases = Number(d3.select("#ncases").property("value"));
+    update(nCases, { scale: radioButton });
   });
   d3.selectAll("input[name='scale']").on("change", function() {
     console.log(this.value);
-    update(d3.select("#ncases").property("value"), { scale: this.value });
+    const nCases = Number(d3.select("#ncases").property("value"));
+    update(nCases, { scale: this.value });
   });
 }
 
