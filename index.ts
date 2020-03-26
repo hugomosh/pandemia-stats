@@ -17,10 +17,10 @@ interface region {
 }
 async function main() {
   console.log("Covid Stats");
-  const MX: region = (await getCountryStatsMock("MX")) as region;
-  const US: region = (await getCountryStatsMock("US")) as region;
-  const ES: region = (await getCountryStatsMock("ES")) as region;
-  const IT: region = (await getCountryStatsMock("IT")) as region;
+  const MX: region = (await getCountryStats("MX")) as region;
+  const US: region = (await getCountryStats("US")) as region;
+  const ES: region = (await getCountryStats("ES")) as region;
+  const IT: region = (await getCountryStats("IT")) as region;
   //const UK: region = (await getCountryStats("GB")) as region;
   //const CA: region = (await getCountryStats("CA")) as region;
   //const USCA: region = (await getCountryStats("US-CA")) as region;
@@ -52,14 +52,13 @@ async function main() {
     .rangeRound([margin.left, width - margin.right])
     .domain([0, DAYS]);
 
-  var y = d3.scaleSymlog().rangeRound([height - margin.bottom, margin.top]);
-
-  var line = d3
-    .line()
-    .defined(d => !isNaN(d[STATUS]))
-    .curve(d3.curveLinear)
-    .x(d => x(d.index))
-    .y(d => y(d[STATUS]));
+  var yLog = d3
+    .scaleSymlog()
+    .constant(1000)
+    .rangeRound([height - margin.bottom, margin.top]);
+  var yOrginal = d3
+    .scaleLinear()
+    .rangeRound([height - margin.bottom, margin.top]);
 
   var z = d3.scaleOrdinal(d3.schemeCategory10);
 
@@ -98,8 +97,24 @@ async function main() {
     .attr("width", width - margin.right - margin.left)
     .attr("height", height);
 
-  update(nCases);
-  function update(cases) {
+  const radioButton = d3
+    .select('input[name="scale"]:checked')
+    .property("value");
+  update(nCases, { scale: radioButton });
+  function update(cases, { scale } = { scale: "log" }) {
+    let y;
+    if (scale === "log") {
+      y = yLog;
+    } else {
+      y = yOrginal;
+    }
+    var line = d3
+      .line()
+      .defined(d => !isNaN(d[STATUS]))
+      .curve(d3.curveLinear)
+      .x(d => x(d.index))
+      .y(d => y(d[STATUS]));
+
     matchedStartingPoint = matchRegionsHist(data, cases, STATUS);
     var copy = Object.keys(matchedStartingPoint);
     var regions = copy.map(function(id) {
@@ -114,25 +129,30 @@ async function main() {
       d3.max(regions, d =>
         d3.max(d.values.slice(0, DAYS), c => Number(c[STATUS]))
       )
-    ]).nice();
+    ]);
 
     svg
       .selectAll(".y-axis")
       .transition()
       .duration(0)
-      .call(d3.axisLeft(y).tickSize(-width + margin.right + margin.left));
+      .call(
+        d3
+          .axisLeft(y)
+          .scale(y)
+          .tickSize(-width + margin.right + margin.left)
+      );
 
-    var city = svg.selectAll(".cities").data(regions);
+    var region = svg.selectAll(".cities").data(regions);
 
-    city.exit().remove();
+    region.exit().remove();
 
-    city
+    region
       .enter()
       .insert("g", ".focus")
       .append("path")
       .attr("class", "line cities")
       .style("stroke", d => z(d.id))
-      .merge(city)
+      .merge(region)
       .transition()
       .duration(0)
       .attr("d", d => line(d.values));
@@ -164,7 +184,14 @@ async function main() {
   }
   d3.select("#ncases").on("change", () => {
     console.log("update");
-    update(d3.select("#ncases").property("value"));
+    const radioButton = d3
+      .select('input[name="scale"]:checked')
+      .property("value");
+    update(d3.select("#ncases").property("value"), { scale: radioButton });
+  });
+  d3.selectAll("input[name='scale']").on("change", function() {
+    console.log(this.value);
+    update(d3.select("#ncases").property("value"), { scale: this.value });
   });
 }
 
