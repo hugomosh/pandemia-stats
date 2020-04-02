@@ -21,30 +21,33 @@ async function main() {
   const US: region = (await getCountryStats("US")) as region;
   const ES: region = (await getCountryStats("ES")) as region;
   const IT: region = (await getCountryStats("IT")) as region;
-  //const UK: region = (await getCountryStats("GB")) as region;
+  const CH: region = (await getCountryStats("CH")) as region;
+
+  const UK: region = (await getCountryStats("GB")) as region;
   const CA: region = (await getCountryStats("CA")) as region;
   const USCA: region = (await getCountryStats("US-CA")) as region;
+  const RU: region = (await getCountryStats("RU")) as region;
   console.log({ MX, US });
   const nCases = 0;
-  d3.select("#ncases").property("value", nCases);
+  d3.select("#nCases").property("value", nCases);
   const DAYS = 60;
 
-  const STATUS = "confirmed";
+  let STATUS = d3.select("#stats").property("value") || "confirmed";
   //const STATUS = "deaths"; //"confirmed";
   const data = {
     MX: MX.stats.history,
     US: US.stats.history,
-    //ES: ES.stats.history,
-    //IT: IT.stats.history
-    // UK: UK.stats.history
+    ES: ES.stats.history,
+    RU: RU.stats.history,
+    UK: UK.stats.history,
+    CH: CH.stats.history,
+    IT: IT.stats.history,
     CA: CA.stats.history,
     USCA: USCA.stats.history
   };
-  let matchedStartingPoint = matchRegionsHist(data, nCases, STATUS);
-  console.log({ matchedStartingPoint });
 
   var svg = d3.select("#chart"),
-    margin = { top: 15, right: 35, bottom: 15, left: 35 },
+    margin = { top: 15, right: 5, bottom: 15, left: 40 },
     width = +svg.attr("width") - margin.left - margin.right,
     height = +svg.attr("height") - margin.top - margin.bottom;
 
@@ -126,12 +129,15 @@ async function main() {
     .attr("x", margin.left)
     .attr("width", width - margin.right - margin.left)
     .attr("height", height);*/
-
+  let matchedStartingPoint = matchRegionsHist(data, nCases, STATUS);
+  console.log({ matchedStartingPoint });
   const radioButton = d3
     .select('input[name="scale"]:checked')
     .property("value");
   update(nCases, { scale: radioButton });
-  function update(cases, { scale } = { scale: "log" }) {
+
+  function update(cases, options?: { scale?: string; statsToShow?: string }) {
+    const { scale = "log", statsToShow = "confirmed" } = options;
     let y;
     if (scale === "log") {
       y = yLog;
@@ -140,12 +146,12 @@ async function main() {
     }
     var line = d3
       .line()
-      .defined(d => !isNaN(d[STATUS]))
+      .defined(d => !isNaN(d[statsToShow]))
       .curve(d3.curveLinear)
       .x(d => x(d.index))
-      .y(d => y(d[STATUS]));
+      .y(d => y(d[statsToShow]));
 
-    matchedStartingPoint = matchRegionsHist(data, cases, STATUS);
+    matchedStartingPoint = matchRegionsHist(data, cases, statsToShow);
     var copy = Object.keys(matchedStartingPoint);
     var regions = copy.map(function(id) {
       return {
@@ -157,7 +163,7 @@ async function main() {
     y.domain([
       cases == 0 ? 1 : cases,
       d3.max(regions, d =>
-        d3.max(d.values.slice(0, DAYS), c => Number(c[STATUS]))
+        d3.max(d.values, c => Number(c[statsToShow]))
       )
     ]).clamp(true);
 
@@ -172,7 +178,7 @@ async function main() {
           .tickSize(-width + margin.right + margin.left)
       );
 
-    var region = svg.selectAll(".cities").data(regions);
+    var region = svg.selectAll(".regions").data(regions);
 
     region.exit().remove();
 
@@ -180,7 +186,7 @@ async function main() {
       .enter()
       .insert("g", ".focus")
       .append("path")
-      .attr("class", "line cities")
+      .attr("class", "line regions")
       .style("stroke", d => z(d.id))
       .merge(region)
       .transition()
@@ -200,7 +206,7 @@ async function main() {
       .attr("y", d =>
         y(
           d.values[d.values.length - 1]
-            ? d.values[d.values.length - 1][STATUS]
+            ? d.values[d.values.length - 1][statsToShow]
             : false
         )
       )
@@ -212,19 +218,16 @@ async function main() {
 
     //tooltip(copy);
   }
-  d3.select("#ncases").on("change", () => {
-    console.log("update");
-    const radioButton = d3
-      .select('input[name="scale"]:checked')
-      .property("value");
-    const nCases = Number(d3.select("#ncases").property("value"));
-    update(nCases, { scale: radioButton });
-  });
-  d3.selectAll("input[name='scale']").on("change", function() {
-    console.log(this.value);
-    const nCases = Number(d3.select("#ncases").property("value"));
-    update(nCases, { scale: this.value });
-  });
+  d3.select("#nCases").on("change", controlHasChange);
+  d3.selectAll("input[name='scale']").on("change", controlHasChange);
+  var stats = d3.select("#stats").on("change", controlHasChange);
+
+  function controlHasChange() {
+    const nCases = Number(d3.select("#nCases").property("value"));
+    const scale = d3.select('input[name="scale"]:checked').property("value");
+    const statsToShow = d3.select("#stats").property("value");
+    update(nCases, { scale, statsToShow });
+  }
 }
 
 main();
