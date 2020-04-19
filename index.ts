@@ -1,7 +1,14 @@
 import { getCountryStatsMock } from "./covid/api-connection-mock";
 import { getCountryStats } from "./covid/api-connection";
 import { matchRegionsHist } from "./covid/covid-manipulation";
+import {
+  renderCountriesSelection,
+  appendCountrySelectionToNode,
+  getChecked,
+} from "./country/countries";
 import * as d3 from "d3";
+
+const initialRegions = ["MX", "CA", "BR", "EC", "KR", "TR", "RU"];
 
 interface region {
   location: {
@@ -16,7 +23,35 @@ interface region {
   stats: { history: any[] };
 }
 async function main() {
+  prepareChart();
+  renderCOVID(initialRegions);
+  const countryForm = appendCountrySelectionToNode(
+    document.querySelector("div.container"),
+    { initialValue: initialRegions }
+  );
+  countryForm.addEventListener("change", () => {
+    const res = getChecked(countryForm);
+    console.log(res);
+    renderCOVID(res);
+  });
+}
+function prepareChart() {
+  
+}
+async function renderCOVID(regions = initialRegions) {
   console.log("Covid Stats");
+
+  const regionResult = await Promise.all(
+    regions.map((r) => getCountryStats(r))
+  );
+  console.log({ regionResult });
+
+  let data = {};
+  for (let i = 0; i < regionResult.length; i++) {
+    const { location, stats } = regionResult[i];
+    data[location.isoCode] = stats.history;
+  }
+  /* 
   const MX: region = (await getCountryStats("MX")) as region;
   const US: region = (await getCountryStats("US")) as region;
   const ES: region = (await getCountryStats("ES")) as region;
@@ -27,13 +62,7 @@ async function main() {
   const CA: region = (await getCountryStats("CA")) as region;
   const USCA: region = (await getCountryStats("US-CA")) as region;
   const RU: region = (await getCountryStats("RU")) as region;
-  console.log({ MX, US });
-  const nCases = 0;
-  d3.select("#nCases").property("value", nCases);
-  const DAYS = 60;
 
-  let STATUS = d3.select("#stats").property("value") || "confirmed";
-  //const STATUS = "deaths"; //"confirmed";
   const data = {
     MX: MX.stats.history,
     US: US.stats.history,
@@ -43,8 +72,15 @@ async function main() {
     CH: CH.stats.history,
     IT: IT.stats.history,
     CA: CA.stats.history,
-    USCA: USCA.stats.history
-  };
+    USCA: USCA.stats.history,
+  }; */
+
+  const nCases = 0;
+  d3.select("#nCases").property("value", nCases);
+  const DAYS = 60;
+
+  let STATUS = d3.select("#stats").property("value") || "confirmed";
+  //const STATUS = "deaths"; //"confirmed";
 
   var svg = d3.select("#chart"),
     margin = { top: 15, right: 5, bottom: 15, left: 40 },
@@ -146,25 +182,23 @@ async function main() {
     }
     var line = d3
       .line()
-      .defined(d => !isNaN(d[statsToShow]))
+      .defined((d) => !isNaN(d[statsToShow]))
       .curve(d3.curveLinear)
-      .x(d => x(d.index))
-      .y(d => y(d[statsToShow]));
+      .x((d) => x(d.index))
+      .y((d) => y(d[statsToShow]));
 
     matchedStartingPoint = matchRegionsHist(data, cases, statsToShow);
     var copy = Object.keys(matchedStartingPoint);
-    var regions = copy.map(function(id) {
+    var regions = copy.map(function (id) {
       return {
         id: id,
-        values: matchedStartingPoint[id]
+        values: matchedStartingPoint[id],
       };
     });
-    x.domain([0, d3.max(regions, d => d.values.length)]);
+    x.domain([0, d3.max(regions, (d) => d.values.length)]);
     y.domain([
       cases == 0 ? 1 : cases,
-      d3.max(regions, d =>
-        d3.max(d.values, c => Number(c[statsToShow]))
-      )
+      d3.max(regions, (d) => d3.max(d.values, (c) => Number(c[statsToShow]))),
     ]).clamp(true);
 
     svg
@@ -187,11 +221,11 @@ async function main() {
       .insert("g", ".focus")
       .append("path")
       .attr("class", "line regions")
-      .style("stroke", d => z(d.id))
+      .style("stroke", (d) => z(d.id))
       .merge(region)
       .transition()
       .duration(0)
-      .attr("d", d => line(d.values));
+      .attr("d", (d) => line(d.values));
 
     // This places the labels to the right of each line
     svg
@@ -200,10 +234,10 @@ async function main() {
       .join("text")
       .attr("class", "label")
       // place the ticks to the right of the chart
-      .attr("x", d => x(d.values.length - 1))
+      .attr("x", (d) => x(d.values.length - 1))
       // Place the ticks at the same y position as
       // the last y value of the line (remember, d is our array of points)
-      .attr("y", d =>
+      .attr("y", (d) =>
         y(
           d.values[d.values.length - 1]
             ? d.values[d.values.length - 1][statsToShow]
@@ -211,10 +245,10 @@ async function main() {
         )
       )
       .attr("dy", "0.35em")
-      .style("fill", d => z(d.id))
+      .style("fill", (d) => z(d.id))
       .style("font-family", "sans-serif")
       .style("font-size", 12)
-      .text(d => d.id);
+      .text((d) => d.id);
 
     //tooltip(copy);
   }

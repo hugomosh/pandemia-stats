@@ -4,11 +4,11 @@ export async function getCountryStats(countryOrRegion) {
   return await fetch(apiEnpoint, {
     headers: {
       "Subscription-Key": primaryKey,
-      "Cache-Control": "max-age=21,150"
-    }
-  }).then(async response => {
+      "Cache-Control": "max-age=21,150",
+    },
+  }).then(async (response) => {
     const json = await response.json();
-    console.log({ json });
+    // console.log({ json });
     return json;
   });
 }
