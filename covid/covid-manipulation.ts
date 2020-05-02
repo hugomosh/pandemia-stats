@@ -4,7 +4,7 @@ export function matchRegionsHist(
   attribute: string
 ) {
   let res = {};
-  Object.keys(regions).forEach(key => {
+  Object.keys(regions).forEach((key) => {
     const regionHist = regions[key];
     let regionMatchedHist = matchRegionHist(regionHist, nCases, attribute);
     res[key] = regionMatchedHist;
@@ -12,9 +12,13 @@ export function matchRegionsHist(
   return res;
 }
 
-export function matchRegionHist(hist: any[], nCases, attribute: string): any[] {
+export function matchRegionHist(
+  hist: any[],
+  nCases: number,
+  attribute: string
+): any[] {
   return hist
-    .filter(h => h[attribute] >= nCases)
+    .filter((h) => h[attribute] >= nCases)
     .map((h, i) => {
       h.index = i;
       return h;

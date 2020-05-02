@@ -23,8 +23,9 @@ interface region {
   stats: { history: any[] };
 }
 async function main() {
-  prepareChart();
-  renderCOVID(initialRegions);
+  var svg = covidCountryChart.init();
+  //renderCOVID(initialRegions);
+
   const countryForm = appendCountrySelectionToNode(
     document.querySelector("div.container"),
     { initialValue: initialRegions }
@@ -35,12 +36,166 @@ async function main() {
     renderCOVID(res);
   });
 }
-function prepareChart() {
-  
-}
+
+const deafultValues = {
+  regions: ["MX", "RU", "CA", "EC", "BR", "KR", "TR", "CO", "ES","IT","US"],
+  matchCases: 20,
+  metric: "deaths",
+  scale: "log",
+  windowSizeIndays: 100,
+};
+
+const getData = async ({ regions, matchCases, metric } = deafultValues) => {
+  console.log("Data with:", { regions, matchCases, metric });
+
+  const regionResult =
+    (await Promise.all(regions.map((r) => getCountryStats(r))).catch(
+      console.warn
+    )) ||
+    (await Promise.all(deafultValues.regions.map((r) => getCountryStats(r)))) ||
+    [];
+  console.log({ regionResult });
+
+  const data = {};
+  for (let i = 0; i < regionResult.length; i++) {
+    const { location, stats } = regionResult[i];
+    data[location.isoCode] = stats.history;
+  }
+
+  const matchedStartingPoint = matchRegionsHist(data, matchCases, metric);
+  const copy = Object.keys(matchedStartingPoint);
+  const result = copy.map(function (id) {
+    return {
+      id: id,
+      values: matchedStartingPoint[id],
+    };
+  });
+  return result;
+};
+
+let covidCountryChart = {
+  init: async function () {
+    console.log("Init covidCountryChart", this);
+
+    const svg = d3.select("#chart");
+    const margin = { top: 15, right: 5, bottom: 15, left: 50 },
+      width = +svg.attr("width") - margin.left - margin.right,
+      height = +svg.attr("height") - margin.top - margin.bottom;
+
+    const scales = {
+      linear: d3.scaleLinear(),
+      log: d3.scaleLog().base(10),
+    };
+    Object.keys(scales).forEach((scaleType) => {
+      scales[scaleType].rangeRound([height - margin.bottom, margin.top]);
+    });
+    const x = d3
+      .scaleLinear()
+      .rangeRound([margin.left, width - margin.right])
+      .domain([0, deafultValues.windowSizeIndays]);
+
+    const z = d3.scaleOrdinal(d3.schemeCategory10);
+
+    svg
+      .append("g")
+      .attr("class", "x-axis")
+      .attr("transform", "translate(0," + (height - margin.bottom) + ")")
+      .call(d3.axisBottom(x));
+
+    svg
+      .append("g")
+      .attr("class", "y-axis")
+      .attr("transform", "translate(" + margin.left + ",0)");
+
+    // X title
+    svg
+      .append("text")
+      .attr("transform", `translate(${width / 2}, ${height + margin.top + 10})`)
+      .style("text-anchor", "middle")
+      .text("Días desde 20 casos");
+
+    const data = await getData();
+    const y = scales[deafultValues.scale];
+    const line = d3
+      .line()
+      .defined((d) => !isNaN(d[deafultValues.metric]))
+      .curve(d3.curveLinear)
+      .x((d) => x(d.index))
+      .y((d) => y(d[deafultValues.metric]));
+
+    x.domain([0, d3.max(data, (d) => d.values.length)]);
+    y.domain([
+      deafultValues.matchCases ||1,
+      d3.max(data, (d) =>
+        d3.max(d.values, (c) => Number(c[deafultValues.metric]))
+      ),
+    ]).clamp(true);
+
+    let yAxis = d3
+      .axisLeft(y)
+      .ticks(10)
+      .tickFormat(y.tickFormat(10, ""))
+      .tickSize(-width + margin.right + margin.left);
+
+    svg.selectAll(".x-axis").transition().duration(1000).call(d3.axisBottom(x));
+
+    svg
+      .selectAll(".y-axis")
+      .call(yAxis)
+      .call((g) =>
+        g
+          .selectAll(".tick:not(:first-of-type) line")
+          .attr("stroke-opacity", 0.2)
+          .attr("stroke-dasharray", "2,2")
+      );
+
+    const regions = svg.selectAll(".region").data(data).enter().insert("g");
+
+    // Insert lines
+    regions
+      .append("path")
+      .attr("class", "line")
+      .style("stroke", (d) => z(d.id))
+      .transition()
+      .duration(1000)
+      .attr("d", (d) => line(d.values));
+
+    // Add circles
+    regions
+      .append("g")
+      .attr("fill", (d) => z(d.id))
+      .selectAll("circle")
+      .data((d) => d.values)
+      .join("circle")
+      .attr("cx", (d) => x(d.index))
+      .attr("cy", (d) => y(d[deafultValues.metric]))
+      .attr("r", 2);
+
+    // Place labels
+    regions
+      .insert("text")
+      .attr("class", "label")
+      // place the ticks to the right of the chart
+      .attr("x", (d) => x(d.values.length - 1) + 5)
+      // Place the ticks at the same y position as
+      // the last y value of the line (remember, d is our array of points)
+      .attr("y", (d) =>
+        y(
+          d.values[d.values.length - 1]
+            ? d.values[d.values.length - 1][deafultValues.metric]
+            : false
+        )
+      )
+      .attr("dy", "0.35em")
+      .style("fill", (d) => z(d.id))
+      .text((d) => d.id);
+
+    return svg.node();
+  },
+};
+
 async function renderCOVID(regions = initialRegions) {
   console.log("Covid Stats");
-
   const regionResult = await Promise.all(
     regions.map((r) => getCountryStats(r))
   );
@@ -51,39 +206,13 @@ async function renderCOVID(regions = initialRegions) {
     const { location, stats } = regionResult[i];
     data[location.isoCode] = stats.history;
   }
-  /* 
-  const MX: region = (await getCountryStats("MX")) as region;
-  const US: region = (await getCountryStats("US")) as region;
-  const ES: region = (await getCountryStats("ES")) as region;
-  const IT: region = (await getCountryStats("IT")) as region;
-  const CH: region = (await getCountryStats("CH")) as region;
-
-  const UK: region = (await getCountryStats("GB")) as region;
-  const CA: region = (await getCountryStats("CA")) as region;
-  const USCA: region = (await getCountryStats("US-CA")) as region;
-  const RU: region = (await getCountryStats("RU")) as region;
-
-  const data = {
-    MX: MX.stats.history,
-    US: US.stats.history,
-    ES: ES.stats.history,
-    RU: RU.stats.history,
-    UK: UK.stats.history,
-    CH: CH.stats.history,
-    IT: IT.stats.history,
-    CA: CA.stats.history,
-    USCA: USCA.stats.history,
-  }; */
-
   const nCases = 0;
   d3.select("#nCases").property("value", nCases);
-  const DAYS = 60;
-
+  const DAYS = 100;
   let STATUS = d3.select("#stats").property("value") || "confirmed";
-  //const STATUS = "deaths"; //"confirmed";
 
   var svg = d3.select("#chart"),
-    margin = { top: 15, right: 5, bottom: 15, left: 40 },
+    margin = { top: 15, right: 5, bottom: 15, left: 50 },
     width = +svg.attr("width") - margin.left - margin.right,
     height = +svg.attr("height") - margin.top - margin.bottom;
 
@@ -91,38 +220,8 @@ async function renderCOVID(regions = initialRegions) {
     .scaleLinear()
     .rangeRound([margin.left, width - margin.right])
     .domain([0, DAYS]);
+
   const defaultSelection = [0, DAYS];
-
-  /*
-  const brush = d3
-    .brushX()
-    .extent([
-      [margin.left, 0.5],
-      [width - margin.right, height - margin.bottom + 0.5]
-    ])
-    .on("brush", brushed)
-    .on("end", brushended);
-
-  const gb = svg
-    .append("g")
-    .call(brush)
-    .call(brush.move, defaultSelection);
-  function brushed() {
-    if (d3.event.selection) {
-      svg.property(
-        "value",
-        d3.event.selection.map(x.invert, x).map(d3.utcDay.round)
-      );
-      svg.dispatch("input");
-    }
-  }
-
-  function brushended() {
-    if (!d3.event.selection) {
-      gb.call(brush.move, defaultSelection);
-    }
-  }
-  */
 
   var yLog = d3.scaleLog().rangeRound([height - margin.bottom, margin.top]);
   var yOrginal = d3
@@ -141,36 +240,15 @@ async function renderCOVID(regions = initialRegions) {
     .append("g")
     .attr("class", "y-axis")
     .attr("transform", "translate(" + margin.left + ",0)");
-  /* var focus = svg
-    .append("g")
-    .attr("class", "focus")
-    .style("display", "none");
-  focus
-    .append("line")
-    .attr("class", "lineHover")
-    .style("stroke", "#999")
-    .attr("stroke-width", 1)
-    .style("shape-rendering", "crispEdges")
-    .style("opacity", 0.5)
-    .attr("y1", -height)
-    .attr("y2", 0);
-  focus
-    .append("text")
-    .attr("class", "lineHoverDate")
-    .attr("text-anchor", "middle")
-    .attr("font-size", 12);
-  var overlay = svg
-    .append("rect")
-    .attr("class", "overlay")
-    .attr("x", margin.left)
-    .attr("width", width - margin.right - margin.left)
-    .attr("height", height);*/
+
   let matchedStartingPoint = matchRegionsHist(data, nCases, STATUS);
+
   console.log({ matchedStartingPoint });
+
   const radioButton = d3
     .select('input[name="scale"]:checked')
     .property("value");
-  update(nCases, { scale: radioButton });
+  controlHasChange();
 
   function update(cases, options?: { scale?: string; statsToShow?: string }) {
     const { scale = "log", statsToShow = "confirmed" } = options;
@@ -201,24 +279,29 @@ async function renderCOVID(regions = initialRegions) {
       d3.max(regions, (d) => d3.max(d.values, (c) => Number(c[statsToShow]))),
     ]).clamp(true);
 
+    let yAxis = d3
+      .axisLeft(y)
+      .ticks(10)
+      .tickFormat(y.tickFormat(10, ""))
+      .tickSize(-width + margin.right + margin.left);
+
     svg
       .selectAll(".y-axis")
-      .transition()
-      .duration(0)
-      .call(
-        d3
-          .axisLeft(y)
-          .scale(y)
-          .tickSize(-width + margin.right + margin.left)
+      .call(yAxis)
+      .call((g) =>
+        g
+          .selectAll(".tick:not(:first-of-type) line")
+          .attr("stroke-opacity", 0.2)
+          .attr("stroke-dasharray", "2,2")
       );
 
     var region = svg.selectAll(".regions").data(regions);
 
     region.exit().remove();
 
-    region
-      .enter()
-      .insert("g", ".focus")
+    let reigonG = region.enter().insert("g", ".focus");
+
+    reigonG
       .append("path")
       .attr("class", "line regions")
       .style("stroke", (d) => z(d.id))
@@ -227,6 +310,17 @@ async function renderCOVID(regions = initialRegions) {
       .duration(0)
       .attr("d", (d) => line(d.values));
 
+    reigonG
+      .append("g")
+      .attr("stroke", "white")
+      .attr("fill", (d) => z(d.id))
+      .selectAll("circle")
+      .data((d) => d.values)
+      .join("circle")
+
+      .attr("cx", (d) => x(d.index))
+      .attr("cy", (d) => y(d[statsToShow]))
+      .attr("r", 2);
     // This places the labels to the right of each line
     svg
       .selectAll("text.label")
@@ -234,7 +328,7 @@ async function renderCOVID(regions = initialRegions) {
       .join("text")
       .attr("class", "label")
       // place the ticks to the right of the chart
-      .attr("x", (d) => x(d.values.length - 1))
+      .attr("x", (d) => x(d.values.length - 1) + 5)
       // Place the ticks at the same y position as
       // the last y value of the line (remember, d is our array of points)
       .attr("y", (d) =>
@@ -246,15 +340,14 @@ async function renderCOVID(regions = initialRegions) {
       )
       .attr("dy", "0.35em")
       .style("fill", (d) => z(d.id))
-      .style("font-family", "sans-serif")
-      .style("font-size", 12)
       .text((d) => d.id);
 
     //tooltip(copy);
   }
+
   d3.select("#nCases").on("change", controlHasChange);
   d3.selectAll("input[name='scale']").on("change", controlHasChange);
-  var stats = d3.select("#stats").on("change", controlHasChange);
+  d3.select("#stats").on("change", controlHasChange);
 
   function controlHasChange() {
     const nCases = Number(d3.select("#nCases").property("value"));

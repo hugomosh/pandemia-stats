@@ -5,7 +5,8 @@
       width: 100%;
       margin: auto;
       max-width: 850x;
-      font: 14px arial;
+      font: 14px;
+      font-family: Arial, Helvetica, sans-serif;
     }
     .container {
       padding: 20px;
@@ -16,27 +17,26 @@
       width: 800px;
       align-items: center;
     }
+    .x-axis text {
+      font-size: 17px;
+    }
+    .y-axis text {
+      font-size: 13px;
+    }
+
     .y-axis line {
-      opacity: 0.2;
+      opacity: 0.8;
     }
     .y-axis path {
       display: none;
     }
     .line {
       fill: none;
-      stroke-width: 1.5px;
+      stroke-width: 1.7px;
       opacity: 0.75;
     }
-    .overlay {
-      fill: none;
-      pointer-events: all;
-    }
-    .lineHoverText {
-      text-shadow: -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff,
-        2px 2px 0 #fff;
-    }
-    .hoverCircle {
-      opacity: 0.75;
+    .label {
+      font-size: 17px;
     }
   </style>
   <body>
@@ -78,8 +78,12 @@
           <label for="ordinal">Ordinal</label>
         </div>
       </div>
-      <svg id="chart" width="900" height="500"></svg>
-      <p>Inspired by FT</p>
+      <h4>
+        COVID-19 Casos letales en escala logarítmica desde los primeros 20 casos
+      </h4>
+
+      <svg id="chart" width="900" height="550"></svg>
+      <p><a href="https://twitter.com/hugomosh">@hugomosh</a> Inspired by FT</p>
     </div>
     <script src="./index.ts"></script>
   </body>
