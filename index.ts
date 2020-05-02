@@ -23,9 +23,20 @@ interface region {
   stats: { history: any[] };
 }
 async function main() {
-  var svg = covidCountryChart.init();
-  //renderCOVID(initialRegions);
+  var chart = await covidCountryChart.init();
+  //activateControls();
+  let flag = false;
+  let c = 0;
+  setInterval(() => {
+    flag = !flag;
+    chart.switchScale(flag ? "linear" : "log");
+    c++;
+    if (c > 10) {
+      debugger;
+    }
+  }, 2000);
 
+  //renderCOVID(initialRegions);
   const countryForm = appendCountrySelectionToNode(
     document.querySelector("div.container"),
     { initialValue: initialRegions }
@@ -37,8 +48,23 @@ async function main() {
   });
 }
 
+function activateControls() {
+  d3.select("#nCases").on("change", controlHasChange);
+  d3.selectAll("input[name='scale']").on("change", controlHasChange);
+  d3.select("#stats").on("change", controlHasChange);
+
+  function controlHasChange() {
+    const nCases = Number(d3.select("#nCases").property("value"));
+    const scale = d3.select('input[name="scale"]:checked').property("value");
+    const statsToShow = d3.select("#stats").property("value");
+    console.log({ nCases, scale, statsToShow });
+
+    //update(nCases, { scale, statsToShow });
+  }
+}
+
 const deafultValues = {
-  regions: ["MX", "RU", "CA", "EC", "BR", "KR", "TR", "CO", "ES","IT","US"],
+  regions: ["MX", "RU", "CA", "EC", "BR", "KR", "TR", "CO", "ES", "IT", "US"],
   matchCases: 20,
   metric: "deaths",
   scale: "log",
@@ -125,7 +151,7 @@ let covidCountryChart = {
 
     x.domain([0, d3.max(data, (d) => d.values.length)]);
     y.domain([
-      deafultValues.matchCases ||1,
+      deafultValues.matchCases || 1,
       d3.max(data, (d) =>
         d3.max(d.values, (c) => Number(c[deafultValues.metric]))
       ),
@@ -163,6 +189,7 @@ let covidCountryChart = {
     // Add circles
     regions
       .append("g")
+      .attr("class", "circle")
       .attr("fill", (d) => z(d.id))
       .selectAll("circle")
       .data((d) => d.values)
@@ -190,7 +217,56 @@ let covidCountryChart = {
       .style("fill", (d) => z(d.id))
       .text((d) => d.id);
 
-    return svg.node();
+    function switchScale(scale = "log") {
+      // TODO: no repeat
+      const y = scales[scale];
+      y.domain([
+        deafultValues.matchCases || 1,
+        d3.max(data, (d) =>
+          d3.max(d.values, (c) => Number(c[deafultValues.metric]))
+        ),
+      ]).clamp(true);
+      let yAxis = d3.axisLeft(y).tickSize(-width + margin.right + margin.left);
+      if (scale === "log") {
+        yAxis = yAxis.ticks(10).tickFormat(y.tickFormat(10, ""));
+      }
+      svg
+        .selectAll(".y-axis")
+        .transition()
+        .duration(500)
+        .call(yAxis)
+        .call((g) =>
+          g
+            .selectAll(".tick:not(:first-of-type) line")
+            .attr("stroke-opacity", 0.2)
+            .attr("stroke-dasharray", "2,2")
+        );
+
+      //Update line and circles
+      const regions = svg.selectAll(".region").data(data).enter().insert("g");
+
+      // Insert lines
+      regions
+        .append("path")
+        .attr("class", "line")
+        .style("stroke", (d) => z(d.id))
+        .transition()
+        .duration(1000)
+        .attr("d", (d) => line(d.values));
+
+      // Add circles
+      regions
+        .append("g")
+        .attr("class", "circle")
+        .attr("fill", (d) => z(d.id))
+        .selectAll("circle")
+        .data((d) => d.values)
+        .join("circle")
+        .attr("cx", (d) => x(d.index))
+        .attr("cy", (d) => y(d[deafultValues.metric]))
+        .attr("r", 2);
+    }
+    return Object.assign({}, svg.node(), { switchScale });
   },
 };
 
@@ -353,7 +429,9 @@ async function renderCOVID(regions = initialRegions) {
     const nCases = Number(d3.select("#nCases").property("value"));
     const scale = d3.select('input[name="scale"]:checked').property("value");
     const statsToShow = d3.select("#stats").property("value");
-    update(nCases, { scale, statsToShow });
+    console.log({ nCases, scale, statsToShow });
+
+    //update(nCases, { scale, statsToShow });
   }
 }
 
