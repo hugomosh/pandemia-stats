@@ -161,6 +161,11 @@ let covidCountryChart = {
     svg.selectAll(".x-axis").transition().duration(1000).call(d3.axisBottom(x));
     const render = async (options = deafultValues) => {
       const { scale, metric, matchCases } = options;
+      d3.select("h3").text(
+        `COVID-19 Casos ${
+          metric === "deaths" ? "letales" : "confirmados"
+        } en escala logarítmica desde los primeros ${matchCases} casos`
+      );
       const data = await getData({
         regions: deafultValues.regions,
         matchCases,
@@ -203,9 +208,11 @@ let covidCountryChart = {
       regionsEnter
         .append("path")
         .attr("class", "line")
+        .style("opacity", 0)
         .merge(regions.select("path"))
         .style("stroke", (d) => z(d.id))
         .transition(t)
+        .style("opacity", 1)
         .attr("d", (d) => line(d.values));
 
       // Circles
