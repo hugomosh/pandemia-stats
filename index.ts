@@ -27,14 +27,14 @@ async function main() {
   //activateControls();
   let flag = false;
   let c = 0;
-  setInterval(() => {
+  /*   setInterval(() => {
     flag = !flag;
     chart.switchScale(flag ? "linear" : "log");
     c++;
     if (c > 10) {
       debugger;
     }
-  }, 2000);
+  }, 4000); */
 
   //renderCOVID(initialRegions);
   const countryForm = appendCountrySelectionToNode(
@@ -141,15 +141,14 @@ let covidCountryChart = {
       .text("Días desde 20 casos");
 
     const data = await getData();
-    const y = scales[deafultValues.scale];
-    const line = d3
+    let y = scales[deafultValues.scale];
+    let line = d3
       .line()
       .defined((d) => !isNaN(d[deafultValues.metric]))
       .curve(d3.curveLinear)
       .x((d) => x(d.index))
       .y((d) => y(d[deafultValues.metric]));
 
-    x.domain([0, d3.max(data, (d) => d.values.length)]);
     y.domain([
       deafultValues.matchCases || 1,
       d3.max(data, (d) =>
@@ -157,83 +156,37 @@ let covidCountryChart = {
       ),
     ]).clamp(true);
 
-    let yAxis = d3
-      .axisLeft(y)
-      .ticks(10)
-      .tickFormat(y.tickFormat(10, ""))
-      .tickSize(-width + margin.right + margin.left);
+    let yAxis;
 
     svg.selectAll(".x-axis").transition().duration(1000).call(d3.axisBottom(x));
+    const render = async (options = deafultValues) => {
+      const { scale, metric, matchCases } = options;
+      const data = await getData({
+        regions: deafultValues.regions,
+        matchCases,
+        metric,
+      });
+      y = scales[scale];
+      x.domain([0, d3.max(data, (d) => d.values.length)]);
 
-    svg
-      .selectAll(".y-axis")
-      .call(yAxis)
-      .call((g) =>
-        g
-          .selectAll(".tick:not(:first-of-type) line")
-          .attr("stroke-opacity", 0.2)
-          .attr("stroke-dasharray", "2,2")
-      );
-
-    const regions = svg.selectAll(".region").data(data).enter().insert("g");
-
-    // Insert lines
-    regions
-      .append("path")
-      .attr("class", "line")
-      .style("stroke", (d) => z(d.id))
-      .transition()
-      .duration(1000)
-      .attr("d", (d) => line(d.values));
-
-    // Add circles
-    regions
-      .append("g")
-      .attr("class", "circle")
-      .attr("fill", (d) => z(d.id))
-      .selectAll("circle")
-      .data((d) => d.values)
-      .join("circle")
-      .attr("cx", (d) => x(d.index))
-      .attr("cy", (d) => y(d[deafultValues.metric]))
-      .attr("r", 2);
-
-    // Place labels
-    regions
-      .insert("text")
-      .attr("class", "label")
-      // place the ticks to the right of the chart
-      .attr("x", (d) => x(d.values.length - 1) + 5)
-      // Place the ticks at the same y position as
-      // the last y value of the line (remember, d is our array of points)
-      .attr("y", (d) =>
-        y(
-          d.values[d.values.length - 1]
-            ? d.values[d.values.length - 1][deafultValues.metric]
-            : false
-        )
-      )
-      .attr("dy", "0.35em")
-      .style("fill", (d) => z(d.id))
-      .text((d) => d.id);
-
-    function switchScale(scale = "log") {
-      // TODO: no repeat
-      const y = scales[scale];
+      let line = d3
+        .line()
+        .defined((d) => !isNaN(d[metric]))
+        .curve(d3.curveLinear)
+        .x((d) => x(d.index))
+        .y((d) => y(d[metric]));
       y.domain([
-        deafultValues.matchCases || 1,
-        d3.max(data, (d) =>
-          d3.max(d.values, (c) => Number(c[deafultValues.metric]))
-        ),
+        Number(matchCases) || 1,
+        d3.max(data, (d) => d3.max(d.values, (c) => Number(c[metric]))),
       ]).clamp(true);
-      let yAxis = d3.axisLeft(y).tickSize(-width + margin.right + margin.left);
+      yAxis = d3.axisLeft(y).tickSize(-width + margin.right + margin.left);
       if (scale === "log") {
         yAxis = yAxis.ticks(10).tickFormat(y.tickFormat(10, ""));
       }
+      const t = svg.transition().duration(1000);
       svg
         .selectAll(".y-axis")
-        .transition()
-        .duration(500)
+        .transition(t)
         .call(yAxis)
         .call((g) =>
           g
@@ -241,198 +194,93 @@ let covidCountryChart = {
             .attr("stroke-opacity", 0.2)
             .attr("stroke-dasharray", "2,2")
         );
+      svg.selectAll(".x-axis").transition(t).call(d3.axisBottom(x));
 
-      //Update line and circles
-      const regions = svg.selectAll(".region").data(data).enter().insert("g");
+      const regions = svg.selectAll(".region").data(data, (d) => d.id);
+      const regionsEnter = regions.enter().append("g").attr("class", "region");
 
-      // Insert lines
-      regions
+      // Line
+      regionsEnter
         .append("path")
         .attr("class", "line")
+        .merge(regions.select("path"))
         .style("stroke", (d) => z(d.id))
-        .transition()
-        .duration(1000)
+        .transition(t)
         .attr("d", (d) => line(d.values));
 
-      // Add circles
-      regions
+      // Circles
+      regionsEnter
         .append("g")
-        .attr("class", "circle")
+        .attr("class", "circles")
         .attr("fill", (d) => z(d.id))
+        .merge(regions.select("g"))
         .selectAll("circle")
         .data((d) => d.values)
-        .join("circle")
-        .attr("cx", (d) => x(d.index))
-        .attr("cy", (d) => y(d[deafultValues.metric]))
+        .join(
+          (enter) =>
+            enter
+              .append("circle")
+              .attr("cx", (d) => x(d.index))
+              .attr("cy", (d) => y(d[metric])),
+          (update) =>
+            update.call((update) =>
+              update
+                .transition(t)
+                .attr("cx", (d) => x(d.index))
+                .attr("cy", (d) => y(d[metric]))
+            )
+        )
         .attr("r", 2);
+
+      // Place labels
+      regionsEnter
+        .insert("text")
+        .attr("class", "label")
+        .attr("x", (d) => x(d.values.length - 1) + 5)
+        // Place the ticks at the same y position as
+        // the last y value of the line (remember, d is our array of points)
+        .attr("y", (d) =>
+          y(
+            d.values[d.values.length - 1]
+              ? d.values[d.values.length - 1][metric]
+              : false
+          )
+        )
+        .merge(regions.select("text"))
+        .attr("dy", "0.35em")
+        .style("fill", (d) => z(d.id))
+        .text((d) => d.id)
+        .transition(t)
+        // place the ticks to the right of the chart
+        .attr("x", (d) => x(d.values.length - 1) + 5)
+        // Place the ticks at the same y position as
+        // the last y value of the line (remember, d is our array of points)
+        .attr("y", (d) =>
+          y(
+            d.values[d.values.length - 1]
+              ? d.values[d.values.length - 1][metric]
+              : false
+          )
+        );
+    };
+    await render();
+
+    d3.selectAll("input[name='scale']").on("change", controlHasChange);
+    d3.selectAll("input[name='cases']").on("change", controlHasChange);
+    d3.selectAll("input[name='stats']").on("change", controlHasChange);
+
+    async function controlHasChange() {
+      const scale = d3.select('input[name="scale"]:checked').property("value");
+      const matchCases = d3
+        .select('input[name="cases"]:checked')
+        .property("value");
+      const metric = d3.select('input[name="stats"]:checked').property("value");
+      await render({ scale, matchCases, metric });
+
+      //update(nCases, { scale, statsToShow });
     }
-    return Object.assign({}, svg.node(), { switchScale });
+    return Object.assign({}, svg.node(), { render });
   },
 };
-
-async function renderCOVID(regions = initialRegions) {
-  console.log("Covid Stats");
-  const regionResult = await Promise.all(
-    regions.map((r) => getCountryStats(r))
-  );
-  console.log({ regionResult });
-
-  let data = {};
-  for (let i = 0; i < regionResult.length; i++) {
-    const { location, stats } = regionResult[i];
-    data[location.isoCode] = stats.history;
-  }
-  const nCases = 0;
-  d3.select("#nCases").property("value", nCases);
-  const DAYS = 100;
-  let STATUS = d3.select("#stats").property("value") || "confirmed";
-
-  var svg = d3.select("#chart"),
-    margin = { top: 15, right: 5, bottom: 15, left: 50 },
-    width = +svg.attr("width") - margin.left - margin.right,
-    height = +svg.attr("height") - margin.top - margin.bottom;
-
-  var x = d3
-    .scaleLinear()
-    .rangeRound([margin.left, width - margin.right])
-    .domain([0, DAYS]);
-
-  const defaultSelection = [0, DAYS];
-
-  var yLog = d3.scaleLog().rangeRound([height - margin.bottom, margin.top]);
-  var yOrginal = d3
-    .scaleLinear()
-    .rangeRound([height - margin.bottom, margin.top]);
-
-  var z = d3.scaleOrdinal(d3.schemeCategory10);
-
-  svg
-    .append("g")
-    .attr("class", "x-axis")
-    .attr("transform", "translate(0," + (height - margin.bottom) + ")")
-    .call(d3.axisBottom(x));
-
-  svg
-    .append("g")
-    .attr("class", "y-axis")
-    .attr("transform", "translate(" + margin.left + ",0)");
-
-  let matchedStartingPoint = matchRegionsHist(data, nCases, STATUS);
-
-  console.log({ matchedStartingPoint });
-
-  const radioButton = d3
-    .select('input[name="scale"]:checked')
-    .property("value");
-  controlHasChange();
-
-  function update(cases, options?: { scale?: string; statsToShow?: string }) {
-    const { scale = "log", statsToShow = "confirmed" } = options;
-    let y;
-    if (scale === "log") {
-      y = yLog;
-    } else {
-      y = yOrginal;
-    }
-    var line = d3
-      .line()
-      .defined((d) => !isNaN(d[statsToShow]))
-      .curve(d3.curveLinear)
-      .x((d) => x(d.index))
-      .y((d) => y(d[statsToShow]));
-
-    matchedStartingPoint = matchRegionsHist(data, cases, statsToShow);
-    var copy = Object.keys(matchedStartingPoint);
-    var regions = copy.map(function (id) {
-      return {
-        id: id,
-        values: matchedStartingPoint[id],
-      };
-    });
-    x.domain([0, d3.max(regions, (d) => d.values.length)]);
-    y.domain([
-      cases == 0 ? 1 : cases,
-      d3.max(regions, (d) => d3.max(d.values, (c) => Number(c[statsToShow]))),
-    ]).clamp(true);
-
-    let yAxis = d3
-      .axisLeft(y)
-      .ticks(10)
-      .tickFormat(y.tickFormat(10, ""))
-      .tickSize(-width + margin.right + margin.left);
-
-    svg
-      .selectAll(".y-axis")
-      .call(yAxis)
-      .call((g) =>
-        g
-          .selectAll(".tick:not(:first-of-type) line")
-          .attr("stroke-opacity", 0.2)
-          .attr("stroke-dasharray", "2,2")
-      );
-
-    var region = svg.selectAll(".regions").data(regions);
-
-    region.exit().remove();
-
-    let reigonG = region.enter().insert("g", ".focus");
-
-    reigonG
-      .append("path")
-      .attr("class", "line regions")
-      .style("stroke", (d) => z(d.id))
-      .merge(region)
-      .transition()
-      .duration(0)
-      .attr("d", (d) => line(d.values));
-
-    reigonG
-      .append("g")
-      .attr("stroke", "white")
-      .attr("fill", (d) => z(d.id))
-      .selectAll("circle")
-      .data((d) => d.values)
-      .join("circle")
-
-      .attr("cx", (d) => x(d.index))
-      .attr("cy", (d) => y(d[statsToShow]))
-      .attr("r", 2);
-    // This places the labels to the right of each line
-    svg
-      .selectAll("text.label")
-      .data(regions)
-      .join("text")
-      .attr("class", "label")
-      // place the ticks to the right of the chart
-      .attr("x", (d) => x(d.values.length - 1) + 5)
-      // Place the ticks at the same y position as
-      // the last y value of the line (remember, d is our array of points)
-      .attr("y", (d) =>
-        y(
-          d.values[d.values.length - 1]
-            ? d.values[d.values.length - 1][statsToShow]
-            : false
-        )
-      )
-      .attr("dy", "0.35em")
-      .style("fill", (d) => z(d.id))
-      .text((d) => d.id);
-
-    //tooltip(copy);
-  }
-
-  d3.select("#nCases").on("change", controlHasChange);
-  d3.selectAll("input[name='scale']").on("change", controlHasChange);
-  d3.select("#stats").on("change", controlHasChange);
-
-  function controlHasChange() {
-    const nCases = Number(d3.select("#nCases").property("value"));
-    const scale = d3.select('input[name="scale"]:checked').property("value");
-    const statsToShow = d3.select("#stats").property("value");
-    console.log({ nCases, scale, statsToShow });
-
-    //update(nCases, { scale, statsToShow });
-  }
-}
 
 main();

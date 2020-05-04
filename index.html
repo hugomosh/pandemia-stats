@@ -12,16 +12,48 @@
       padding: 20px;
     }
     #controls {
+      max-width: 100%;
+      width: 800px;
       display: flex;
       justify-content: space-between;
-      width: 800px;
       align-items: center;
+      flex-wrap: wrap;
+    }
+    fieldset {
+      position: relative;
+      border: none;
+      padding: 0;
+      padding-right: 5px;
+    }
+
+    input {
+      display: none;
+    }
+
+    legend {
+      padding: 1em;
+      font-size: 15px;
+    }
+    label {
+      background: #eee;
+      border-radius: 5px;
+      font-weight: bold;
+      margin: 0 0.5em 0 0;
+      padding: 0.3em 1em;
+    }
+    label:hover {
+      background: #ccc;
+    }
+
+    input:checked + label {
+      background: #0069ff;
+      color: #fff;
     }
     .x-axis text {
       font-size: 17px;
     }
     .y-axis text {
-      font-size: 13px;
+      font-size: 14px;
     }
 
     .y-axis line {
@@ -41,30 +73,13 @@
   </style>
   <body>
     <div class="container">
-      <h1>COVID-19 Cases by country</h1>
-      <div id="controls">
-        <div style="display: grid;">
-          <label for="stats">Log</label><br />
-          <select id="stats">
-            <option value="deaths">Muertes</option>
-            <option value="confirmed">Casos</option>
-            <option value="recovered">Recuperados</option>
-          </select>
-        </div>
+      <h1>
+        COVID-19
+      </h1>
 
-        <div style="display: grid;">
-          <label for="nCases">Number of cases to fix the origin</label>
-          <input
-            type="number"
-            id="nCases"
-            name="nCases"
-            min="0"
-            step="10"
-            value="100"
-          />
-        </div>
-        <div>
-          <label for="stats">Scale</label><br />
+      <div id="controls">
+        <fieldset>
+          <legend>Escala</legend>
           <input
             type="radio"
             id="log"
@@ -74,14 +89,56 @@
             checked
           />
           <label for="log">Log</label>
-          <input type="radio" id="ordinal" name="scale" value="ordinal" />
-          <label for="ordinal">Ordinal</label>
-        </div>
+          <input type="radio" id="linear" name="scale" value="linear" />
+          <label for="linear">Lineal</label>
+        </fieldset>
+        <fieldset>
+          <legend>Métrica</legend>
+          <input
+            type="radio"
+            id="deaths"
+            name="stats"
+            value="deaths"
+            default
+            checked
+          />
+          <label for="deaths">Muertes</label>
+          <input type="radio" id="confirmed" name="stats" value="confirmed" />
+          <label for="confirmed">Casos</label>
+        </fieldset>
+        <fieldset>
+          <legend>Número de casos en los que empieza la trayectoria</legend>
+          <input type="radio" id="0" name="cases" value="0" default checked />
+          <label for="0">Inicio</label>
+          <input type="radio" id="1" name="cases" value="1" default checked />
+          <label for="1">1</label>
+          <input type="radio" id="10" name="cases" value="10" default checked />
+          <label for="10">10</label>
+          <input type="radio" id="30" name="cases" value="30" default checked />
+          <label for="30">30</label>
+          <input
+            type="radio"
+            id="100"
+            name="cases"
+            value="100"
+            default
+            checked
+          />
+          <label for="100">100</label>
+          <input
+            type="radio"
+            id="1000"
+            name="cases"
+            value="1000"
+            default
+            checked
+          />
+          <label for="1000">1000</label>
+        </fieldset>
       </div>
-      <h4>
+      <h3>
         COVID-19 Casos letales en escala logarítmica desde los primeros 20 casos
-      </h4>
-
+      </h3>
       <svg id="chart" width="900" height="550"></svg>
       <p><a href="https://twitter.com/hugomosh">@hugomosh</a> Inspired by FT</p>
     </div>

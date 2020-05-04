@@ -15,18 +15,30 @@ export function renderCountriesSelection({ initialValue = [] }) {
   <style>
     .country{ 
       position:relative;
-      display: inline-flex;
-      border:1px solid #ccc;
-      height: 24px;
-      max-height: 24px;
-      border-radius:12px;
-      padding:0px 3px;
+      background: #eee;
+      border-radius: 5px;
+      margin: 0 0.5em 0 0;
+      padding: 0.3em 1em;
       font-size:14px;
-      font-family: monospace;
+      font-family: "Courier New", Courier, monospace;
       margin: 2px;
+      width:60px;
     }
+    .country:hover {
+      background: #ccc;
+    }
+    .country div.mini{
+      display: block;
+      max-width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size:10px
+    }
+
     input[type="checkbox"]:checked+label.country{
-      background:pink;
+      background: #0069ff;
+      color: #fff;
     }
     input.country-input{
       position:absolute;
@@ -61,7 +73,8 @@ export function renderCountriesSelection({ initialValue = [] }) {
         id="${c.code}"
          value="${c.code}"></input>
         <label class="country" for="${c.code}" title="${c.name}"> 
-          <span>${c.emoji}${c.code}</span>
+          <span>${c.emoji}  ${c.code}</span>
+          <div class="mini">${c.name}</div>
         </label>
         `;
       })
