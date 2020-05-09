@@ -5,6 +5,7 @@ import {
   renderCountriesSelection,
   appendCountrySelectionToNode,
   getChecked,
+  getCoutryEmoji,
 } from "./country/countries";
 import * as d3 from "d3";
 
@@ -64,7 +65,7 @@ function activateControls() {
 }
 
 const deafultValues = {
-  regions: ["MX", "RU", "CA", "EC", "BR", "KR", "TR", "CO", "ES", "IT", "US"],
+  regions: ["MX", "RU", "CA", "EC", "BR", "KR", "TR", "CO", "ES", "IT"],
   matchCases: 20,
   metric: "deaths",
   scale: "log",
@@ -256,7 +257,7 @@ let covidCountryChart = {
         .merge(regions.select("text"))
         .attr("dy", "0.35em")
         .style("fill", (d) => z(d.id))
-        .text((d) => d.id)
+        .text((d) => `${getCoutryEmoji(d.id)} ${d.id}`)
         .transition(t)
         // place the ticks to the right of the chart
         .attr("x", (d) => x(d.values.length - 1) + 5)

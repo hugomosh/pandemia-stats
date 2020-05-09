@@ -83,6 +83,10 @@ export function renderCountriesSelection({ initialValue = [] }) {
   return form;
 }
 
+export function getCoutryEmoji(countryCode: string): string {
+  return countries.find((c) => c.code === countryCode)?.emoji;
+}
+
 export function appendCountrySelectionToNode(node: Element, config) {
   let countriesSelection = document.createElement("div");
   countriesSelection.innerHTML = renderCountriesSelection(config);
