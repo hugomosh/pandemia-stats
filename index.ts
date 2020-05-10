@@ -9,7 +9,18 @@ import {
 } from "./country/countries";
 import * as d3 from "d3";
 
-const initialRegions = ["MX", "CA", "BR", "EC", "KR", "TR", "RU"];
+const initialRegions = [
+  "MX",
+  "RU",
+  "CA",
+  "EC",
+  "BR",
+  "KR",
+  "TR",
+  "CO",
+  "ES",
+  "IT",
+];
 
 interface region {
   location: {
@@ -43,9 +54,9 @@ async function main() {
     { initialValue: initialRegions }
   );
   countryForm.addEventListener("change", () => {
-    const res = getChecked(countryForm);
-    console.log(res);
-    renderCOVID(res);
+    const regions = getChecked(countryForm);
+    console.log(regions);
+    chart.render(Object.assign({ ...chart.getCurrentValue() }, { regions }));
   });
 }
 
@@ -65,8 +76,8 @@ function activateControls() {
 }
 
 const deafultValues = {
-  regions: ["MX", "RU", "CA", "EC", "BR", "KR", "TR", "CO", "ES", "IT"],
-  matchCases: 20,
+  regions: initialRegions,
+  matchCases: 30,
   metric: "deaths",
   scale: "log",
   windowSizeIndays: 100,
@@ -160,31 +171,33 @@ let covidCountryChart = {
     let yAxis;
 
     svg.selectAll(".x-axis").transition().duration(1000).call(d3.axisBottom(x));
+    let currentValues = { ...deafultValues };
     const render = async (options = deafultValues) => {
-      const { scale, metric, matchCases } = options;
+      currentValues = Object.assign({ ...currentValues }, options);
+      const { scale, metric, matchCases, regions } = currentValues;
       d3.select("h3").text(
         `COVID-19 Casos ${
           metric === "deaths" ? "letales" : "confirmados"
         } en escala logarítmica desde los primeros ${matchCases} casos`
       );
       const data = await getData({
-        regions: deafultValues.regions,
+        regions,
         matchCases,
         metric,
       });
       y = scales[scale];
       x.domain([0, d3.max(data, (d) => d.values.length)]);
-
+      y.domain([
+        Number(matchCases) || 1,
+        d3.max(data, (d) => d3.max(d.values, (c) => Number(c[metric]))),
+      ]).clamp(true);
       let line = d3
         .line()
         .defined((d) => !isNaN(d[metric]))
         .curve(d3.curveLinear)
         .x((d) => x(d.index))
         .y((d) => y(d[metric]));
-      y.domain([
-        Number(matchCases) || 1,
-        d3.max(data, (d) => d3.max(d.values, (c) => Number(c[metric]))),
-      ]).clamp(true);
+
       yAxis = d3.axisLeft(y).tickSize(-width + margin.right + margin.left);
       if (scale === "log") {
         yAxis = yAxis.ticks(10).tickFormat(y.tickFormat(10, ""));
@@ -203,6 +216,7 @@ let covidCountryChart = {
       svg.selectAll(".x-axis").transition(t).call(d3.axisBottom(x));
 
       const regions = svg.selectAll(".region").data(data, (d) => d.id);
+      regions.exit().remove();
       const regionsEnter = regions.enter().append("g").attr("class", "region");
 
       // Line
@@ -271,7 +285,7 @@ let covidCountryChart = {
           )
         );
     };
-    await render();
+    await render(currentValues);
 
     d3.selectAll("input[name='scale']").on("change", controlHasChange);
     d3.selectAll("input[name='cases']").on("change", controlHasChange);
@@ -287,7 +301,10 @@ let covidCountryChart = {
 
       //update(nCases, { scale, statsToShow });
     }
-    return Object.assign({}, svg.node(), { render });
+    function getCurrentValue() {
+      return currentValues;
+    }
+    return Object.assign({}, svg.node(), { render, getCurrentValue });
   },
 };
 

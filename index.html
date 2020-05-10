@@ -5,7 +5,6 @@
       width: 100%;
       margin: auto;
       max-width: 850x;
-      font: 14px;
       font-family: Arial, Helvetica, sans-serif;
     }
     .container {
@@ -32,7 +31,7 @@
 
     legend {
       padding: 1em;
-      font-size: 15px;
+      font-size: 17px;
     }
     label {
       background: #eee;
@@ -40,6 +39,7 @@
       font-weight: bold;
       margin: 0 0.5em 0 0;
       padding: 0.3em 1em;
+      font-size: 20px;
     }
     label:hover {
       background: #ccc;
@@ -68,7 +68,7 @@
       opacity: 0.75;
     }
     .label {
-      font-size: 17px;
+      font-size: 19px;
     }
   </style>
   <body>
@@ -108,31 +108,17 @@
         </fieldset>
         <fieldset>
           <legend>Número de casos en los que empieza la trayectoria</legend>
-          <input type="radio" id="0" name="cases" value="0" default  />
+          <input type="radio" id="0" name="cases" value="0" default />
           <label for="0">Inicio</label>
-          <input type="radio" id="1" name="cases" value="1" default  />
+          <input type="radio" id="1" name="cases" value="1" default />
           <label for="1">1</label>
-          <input type="radio" id="10" name="cases" value="10" default  />
+          <input type="radio" id="10" name="cases" value="10" default />
           <label for="10">10</label>
           <input type="radio" id="30" name="cases" value="30" default checked />
           <label for="30">30</label>
-          <input
-            type="radio"
-            id="100"
-            name="cases"
-            value="100"
-            default
-            
-          />
+          <input type="radio" id="100" name="cases" value="100" default />
           <label for="100">100</label>
-          <input
-            type="radio"
-            id="1000"
-            name="cases"
-            value="1000"
-            default
-            
-          />
+          <input type="radio" id="1000" name="cases" value="1000" default />
           <label for="1000">1000</label>
         </fieldset>
       </div>

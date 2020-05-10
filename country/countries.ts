@@ -19,10 +19,10 @@ export function renderCountriesSelection({ initialValue = [] }) {
       border-radius: 5px;
       margin: 0 0.5em 0 0;
       padding: 0.3em 1em;
-      font-size:14px;
+      font-size:20px;
       font-family: "Courier New", Courier, monospace;
       margin: 2px;
-      width:60px;
+      width:80px;
     }
     .country:hover {
       background: #ccc;
@@ -33,7 +33,7 @@ export function renderCountriesSelection({ initialValue = [] }) {
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      font-size:10px
+      font-size:14px
     }
 
     input[type="checkbox"]:checked+label.country{
@@ -55,12 +55,14 @@ export function renderCountriesSelection({ initialValue = [] }) {
   </style>
   <form
     class=countrySelection
-    style="font: 20px var(--sans-serif); 
-        font-variant-numeric: tabular-nums; 
-        display: flex; 
-        max-width: 100%;
-        flex-flow: wrap;
-        align-items: center;"
+    style="    font: 20px var(--sans-serif);
+    font-variant-numeric: tabular-nums;
+    display: flex;
+    max-width: 100%;
+    flex-flow: row;
+    align-items: center;
+    overflow: scroll;
+        "
         
   >
     ${countries
