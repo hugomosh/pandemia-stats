@@ -310,23 +310,3 @@ let covidCountryChart = {
 
 main();
 
-const analitycs = () => {
-  const script = document.createElement("script");
-  script.src = "https://www.googletagmanager.com/gtag/js?id=${UA}";
-  script.type = "text/javascript";
-  script.async = true;
-
-  script.onload = () => {
-    window.dataLayer = window.dataLayer || [];
-    function gtag() {
-      var dataLayer = window.dataLayer;
-      dataLayer.push(arguments);
-    }
-    gtag("js", new Date());
-
-    gtag("config", UA);
-  };
-  document.body.appendChild(script);
-};
-
-analitycs();
